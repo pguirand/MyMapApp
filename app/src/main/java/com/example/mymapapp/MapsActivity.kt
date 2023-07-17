@@ -1,6 +1,7 @@
 package com.example.mymapapp
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.location.Address
@@ -47,6 +48,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
     var polyline: Polyline? =null
     private lateinit var originAddress: String
     private lateinit var destinationAddress: String
+    lateinit var currentAddress : String
 
 
     private lateinit var fusedLocationClient: FusedLocationProviderClient
@@ -72,9 +74,9 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
 
 
 
-//        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+
         locationCallback = object : LocationCallback() {
             override fun onLocationResult(locationResult: LocationResult?) {
                 locationResult?.lastLocation?.let { location ->
@@ -85,14 +87,8 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
         }
 
 
-        originAddress = "45 NE 192th street miami gardens"
-        destinationAddress = "310 NW 207th street miami gardens"
-
-        binding.itineraryBtn.setOnClickListener {
-            drawLine()
-        }
-
-
+//        originAddress = "45 NE 192th street miami gardens"
+//        destinationAddress = "310 NW 207th street miami gardens"
 
 //        setContentView(R.layout.activity_maps)
 
@@ -102,9 +98,11 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
 
         binding.materialSwitch.setOnCheckedChangeListener { _, isChecked ->
             if (isChecked) {
-                Toast.makeText(this, "Checked", Toast.LENGTH_SHORT).show()
+                binding.txOrigin.isEnabled = false
+                binding.txOrigin.setText(currentAddress)
             } else {
-                Toast.makeText(this, "UnChecked", Toast.LENGTH_SHORT).show()
+                binding.txOrigin.isEnabled = true
+                binding.txOrigin.setText("")
             }
 
         }
@@ -114,6 +112,9 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
         myMap = map
 
 
+        binding.itineraryBtn.setOnClickListener {
+            drawLine()
+        }
 
     }
 
@@ -177,6 +178,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
         if (addresses.isNotEmpty()) {
             val address = addresses[0]
             val addressLine = address.getAddressLine(0)
+            currentAddress = addressLine
             displayPosition(coordinates)
             // Handle the address as needed
             showToast(addressLine)
@@ -208,7 +210,6 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     private fun drawLine() {
-        polyline?.remove()
         val originAddress = binding.txOrigin.text.toString()
         val destinationAddress = binding.textDestination.text.toString()
 
@@ -216,9 +217,12 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
         val originLatLng = geocodeLocation(originAddress)
         val destinationLatLng = geocodeLocation(destinationAddress)
 
+
         // Add markers for origin and destination
         myMap.addMarker(MarkerOptions().position(originLatLng).title("Origin"))
         myMap.addMarker(MarkerOptions().position(destinationLatLng).title("Destination"))
+
+        polyline?.remove()
 
         // Draw a polyline between origin and destination
         val polylineOptions = PolylineOptions()
@@ -228,14 +232,16 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
 
         myMap.addPolyline(polylineOptions)
 
-        // Move the camera to the midpoint between origin and destination
-        val midpoint = LatLng(
-            (originLatLng.latitude + destinationLatLng.latitude) / 2,
-            (originLatLng.longitude + destinationLatLng.longitude) / 2
+        val padding = resources.getDimensionPixelSize(R.dimen.map_padding)
 
+        val bounds = LatLngBounds
+            .builder()
+            .include(originLatLng)
+            .include(destinationLatLng)
+            .build()
 
-        )
-        myMap.animateCamera(CameraUpdateFactory.newLatLngZoom(midpoint, 15f))
+        myMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, padding))
+
     }
 
     private fun geocodeLocation(address: String): LatLng {
@@ -248,6 +254,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
             return LatLng(location.latitude, location.longitude)
         }
         // Return default coordinates if geocoding fails
+        Toast.makeText(this, "Not address found", Toast.LENGTH_LONG).show()
         return LatLng(0.0, 0.0)
     }
 
@@ -297,5 +304,19 @@ fun unUsed() {
 //            map.moveCamera(CameraUpdateFactory.newLatLngBounds(bounds, padding))
             myMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, padding))
         }*/
+
+
+
+//        myMap.setOnMapLoadedCallback {
+//            map.moveCamera(CameraUpdateFactory.newLatLngBounds(bounds, padding))
+//            myMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, padding))
+//        }
+
+    // Move the camera to the midpoint between origin and destination
+//        val midpoint = LatLng(
+//            (originLatLng.latitude + destinationLatLng.latitude) / 2,
+//            (originLatLng.longitude + destinationLatLng.longitude) / 2
+//        )
+//        myMap.animateCamera(CameraUpdateFactory.newLatLngZoom(midpoint, 15f))
 }
 
